@@ -1,337 +1,252 @@
 """
-pipeline.py — Agentic RAG orchestration.
+pipeline.py — Agentic RAG pipeline.
 
-Agent steps:
-  1. Query analysis   — classify intent, detect if chart needed
-  2. Query decomposition — split complex questions into sub-queries
-  3. Multi-query retrieval — retrieve for each sub-query, deduplicate
-  4. Context assembly — rank & assemble retrieved chunks
-  5. Answer generation — LLM with grounding instructions
-  6. Self-reflection  — verify answer is grounded; retry once if hallucination detected
-  7. Chart generation — if query needs a visual, produce chart_data JSON
+Steps per query:
+  1. Query decomposition   — break into 2-3 sub-queries via LLM
+  2. Multi-query retrieval — hybrid search for each sub-query, deduplicated
+  3. Context assembly      — expand to parent chunks, build context string
+  4. Answer generation     — Groq LLM with grounding instructions
+  5. Self-reflection       — verify answer; retry once if hallucination detected
+  6. Chart generation      — auto-detect if a chart would help; generate data
 """
 
 import os
 import json
 import logging
 import re
-from typing import List, Dict, Any, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from groq import Groq
 
-from .ingestion import index_pdf
+from .ingestion import get_embedder, get_qdrant_client, index_pdf
 from .retriever import HybridRetriever
 
 logger = logging.getLogger(__name__)
 
+# Configure logging so we can see what's happening in Streamlit Cloud logs
+logging.basicConfig(level=logging.INFO)
+
 GROQ_MODEL = "llama-3.3-70b-versatile"
 
-SYSTEM_PROMPT = """You are BookMind, an expert financial literacy assistant trained on:
+SYSTEM_PROMPT = """You are BookMind, an expert financial literacy assistant.
+You have access to passages from:
 - "Rich Dad Poor Dad" by Robert Kiyosaki
-- "The Intelligent Investor" by Benjamin Graham (with Jason Zweig commentary)
+- "The Intelligent Investor" by Benjamin Graham
 
-Your job is to give precise, grounded, insightful answers based ONLY on the provided context chunks.
-
-Rules:
-1. Always cite which book your answer comes from (e.g. [Rich Dad Poor Dad, p.42])
-2. If context doesn't contain the answer, say so clearly — do NOT hallucinate
-3. Be analytical and educational; connect concepts where relevant
-4. Use markdown formatting: **bold** for key terms, bullet points for lists
-5. When comparing both books, clearly label each perspective
+Answer ONLY from the provided context. Always cite [Book, p.X].
+Use **bold** for key terms. If context doesn't cover the question, say so honestly.
 """
 
-DECOMPOSE_PROMPT = """You are a query analysis expert. Given a user's question, break it into 2-3 focused sub-queries that together cover the full question.
-
-Return ONLY a JSON array of strings, no explanation. Example:
-["What are assets according to Kiyosaki?", "How does Kiyosaki define liabilities?", "What is the cash flow quadrant?"]
+DECOMPOSE_PROMPT = """\
+Break the following question into 2-3 focused sub-queries for better retrieval.
+Return ONLY a valid JSON array of strings, no other text, no markdown fences.
+Example: ["sub-query 1", "sub-query 2", "sub-query 3"]
 
 Question: {question}"""
 
-CHART_DETECT_PROMPT = """Analyze this question and context. Should the answer include a chart/graph?
-
-Return JSON: {{"needs_chart": true/false, "chart_type": "bar|line|horizontal_bar|none", "reason": "brief reason"}}
+CHART_DETECT_PROMPT = """\
+Should the answer to this question include a chart? Consider: comparisons, \
+numeric data, timelines, stages, rankings.
+Return ONLY valid JSON, no markdown: {{"needs_chart": true, "chart_type": "bar"}}
+Chart types: bar, line, horizontal_bar
 
 Question: {question}
 Context preview: {context_preview}"""
 
-CHART_DATA_PROMPT = """Based on this context and question, generate chart data as JSON.
-
-Return ONLY JSON in this exact format:
-{{
-  "type": "bar",
-  "title": "Chart title here",
-  "labels": ["Label1", "Label2", "Label3"],
-  "values": [10, 20, 30]
-}}
-
-Use numeric values only. Max 6 data points. Chart types: bar, line, horizontal_bar.
+CHART_DATA_PROMPT = """\
+Generate chart data for the answer to this question.
+Return ONLY valid JSON, no markdown, no explanation:
+{{"type":"bar","title":"Title here","labels":["A","B","C"],"values":[1,2,3]}}
+Max 6 data points. Values must be numbers.
 
 Question: {question}
 Context: {context}"""
 
-REFLECTION_PROMPT = """Review this answer against the provided context. 
+REFLECTION_PROMPT = """\
+Does this answer only use facts from the context, or does it hallucinate?
+Return ONLY valid JSON, no markdown: {{"grounded": true, "issues": ""}}
 
 Answer: {answer}
-Context: {context}
-
-Is the answer grounded in the context? Does it make claims not supported by the context?
-Return JSON: {{"grounded": true/false, "issues": "description of any unsupported claims or empty string"}}"""
+Context: {context}"""
 
 
 class AgenticRAGPipeline:
+
     def __init__(self):
-        self.groq = Groq(api_key=os.environ["GROQ_API_KEY"])
+        api_key = os.environ.get("GROQ_API_KEY")
+        if not api_key:
+            raise EnvironmentError("GROQ_API_KEY environment variable is not set.")
+        self.groq      = Groq(api_key=api_key)
+        self.embedder  = get_embedder()
+        self.db        = get_qdrant_client()
         self.retriever = HybridRetriever(top_k_dense=20, top_k_final=6)
-        self._embedder = None
-        self._client = None
+        self.retriever.init(self.embedder, self.db)
+        logger.info("AgenticRAGPipeline initialised. Qdrant collections: %s",
+                    [c.name for c in self.db.get_collections().collections])
 
-    # ── Lazy accessors for shared embedder/client ─────────────────────────
-    @property
-    def embedder(self):
-        if self._embedder is None:
-            from .ingestion import _get_embedder
-            self._embedder = _get_embedder()
-        return self._embedder
-
-    @property
-    def qdrant(self):
-        if self._client is None:
-            from .ingestion import _get_qdrant
-            self._client = _get_qdrant()
-        return self._client
-
-    # ── Document indexing ─────────────────────────────────────────────────
+    # ── Document indexing ──────────────────────────────────────────────────
     def index_document(self, pdf_path: str, display_name: str) -> int:
-        return index_pdf(pdf_path, display_name,
-                         embedder=self.embedder, client=self.qdrant)
+        n = index_pdf(pdf_path, display_name,
+                      embedder=self.embedder, client=self.db)
+        logger.info("index_document: %d chunks for '%s'", n, display_name)
+        return n
 
-    # ── LLM call ──────────────────────────────────────────────────────────
-    def _llm(self, prompt: str, system: str = "", max_tokens: int = 1500,
-             temperature: float = 0.2) -> str:
+    # ── LLM helpers ───────────────────────────────────────────────────────
+    def _llm(self, prompt: str, system: str = "",
+             max_tokens: int = 1500, temperature: float = 0.2) -> str:
         messages = []
         if system:
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": prompt})
-
         resp = self.groq.chat.completions.create(
-            model=GROQ_MODEL,
-            messages=messages,
-            max_tokens=max_tokens,
-            temperature=temperature
+            model=GROQ_MODEL, messages=messages,
+            max_tokens=max_tokens, temperature=temperature,
         )
         return resp.choices[0].message.content.strip()
 
-    def _llm_json(self, prompt: str, system: str = "") -> Any:
-        """LLM call that returns parsed JSON."""
-        raw = self._llm(prompt, system=system, max_tokens=400, temperature=0.0)
-        # Strip markdown code fences if present
-        raw = re.sub(r"```json\s*", "", raw)
-        raw = re.sub(r"```\s*", "", raw)
+    def _llm_json(self, prompt: str) -> Any:
+        raw = self._llm(prompt, max_tokens=400, temperature=0.0)
+        raw = re.sub(r"```json\s*|```", "", raw).strip()
         try:
             return json.loads(raw)
         except json.JSONDecodeError:
-            # Try to extract JSON from response
-            match = re.search(r'\{.*\}|\[.*\]', raw, re.DOTALL)
-            if match:
-                return json.loads(match.group())
+            m = re.search(r'(\{.*\}|\[.*\])', raw, re.DOTALL)
+            if m:
+                return json.loads(m.group(1))
             raise
 
-    # ── Step 1: Query decomposition ───────────────────────────────────────
-    def _decompose_query(self, question: str) -> List[str]:
-        """Break complex question into sub-queries."""
+    # ── Pipeline steps ────────────────────────────────────────────────────
+    def _decompose(self, question: str) -> List[str]:
         try:
-            prompt = DECOMPOSE_PROMPT.format(question=question)
-            sub_queries = self._llm_json(prompt)
-            if isinstance(sub_queries, list) and len(sub_queries) > 0:
-                # Always include original question
-                all_queries = [question] + [q for q in sub_queries if q != question]
-                return all_queries[:4]  # max 4 queries
+            sub = self._llm_json(DECOMPOSE_PROMPT.format(question=question))
+            if isinstance(sub, list) and sub:
+                combined = [question] + [q for q in sub if q != question]
+                return combined[:4]
         except Exception as e:
-            logger.warning("Query decomposition failed: %s", e)
+            logger.warning("Decomposition failed (%s), using original query", e)
         return [question]
 
-    # ── Step 2: Multi-query retrieval ─────────────────────────────────────
     def _multi_retrieve(self, queries: List[str]) -> List[Dict]:
-        """Retrieve for all sub-queries, deduplicate by chunk_id."""
-        seen_ids = set()
-        all_chunks = []
+        seen, all_chunks = set(), []
         for q in queries:
-            chunks = self.retriever.retrieve(q, top_k=6)
-            for c in chunks:
-                cid = c.get("chunk_id", c.get("text", "")[:30])
-                if cid not in seen_ids:
-                    seen_ids.add(cid)
-                    all_chunks.append(c)
-        return all_chunks[:12]  # cap total context
+            for chunk in self.retriever.retrieve(q, client=self.db, top_k=6):
+                cid = chunk.get("chunk_id", chunk.get("text", "")[:30])
+                if cid not in seen:
+                    seen.add(cid)
+                    all_chunks.append(chunk)
+        logger.info("_multi_retrieve: %d unique chunks from %d queries",
+                    len(all_chunks), len(queries))
+        return all_chunks[:12]
 
-    # ── Step 3: Context assembly ──────────────────────────────────────────
     def _build_context(self, chunks: List[Dict]) -> Tuple[str, List[str]]:
-        """Build context string and source list from chunks."""
-        context_parts = []
-        sources = []
-        seen_parents = set()
-
-        for chunk in chunks:
-            # Use parent_text for richer context if not already included
-            text = chunk.get("parent_text") or chunk.get("text", "")
-            pid  = chunk.get("parent_id", chunk.get("chunk_id", ""))
-
-            if pid in seen_parents:
+        parts, sources, seen_parents = [], [], set()
+        for c in chunks:
+            text = (c.get("parent_text") or c.get("text", "")).strip()
+            pid  = c.get("parent_id") or c.get("chunk_id", "")
+            if pid in seen_parents or not text:
                 continue
             seen_parents.add(pid)
+            src   = c.get("source", "Unknown")
+            page  = c.get("page", "?")
+            parts.append(f"[{src}, p.{page}]\n{text}")
+            label = f"{src}, p.{page}"
+            if label not in sources:
+                sources.append(label)
+        return "\n\n---\n\n".join(parts), sources
 
-            source = chunk.get("source", "Unknown")
-            page   = chunk.get("page", "?")
-            context_parts.append(f"[{source}, p.{page}]\n{text}")
-
-            src_label = f"{source}, p.{page}"
-            if src_label not in sources:
-                sources.append(src_label)
-
-        return "\n\n---\n\n".join(context_parts), sources
-
-    # ── Step 4: Answer generation ─────────────────────────────────────────
     def _generate_answer(self, question: str, context: str,
-                         chat_history: List[Dict]) -> str:
-        # Build history suffix
-        history_str = ""
-        if chat_history:
-            recent = chat_history[-4:]  # last 4 exchanges
-            history_str = "\n\nConversation history:\n"
-            for m in recent:
-                role = "User" if m["role"] == "user" else "Assistant"
-                history_str += f"{role}: {m['content'][:300]}\n"
-
-        prompt = f"""Answer the following question using ONLY the provided context.
-{history_str}
-
-Context:
-{context}
-
-Question: {question}
-
-Instructions:
-- Cite sources in format [Book Name, p.X]
-- Be thorough but concise
-- Use **bold** for key concepts
-- If the answer spans multiple books, compare perspectives
-"""
-        return self._llm(prompt, system=SYSTEM_PROMPT, max_tokens=1200,
-                         temperature=0.3)
-
-    # ── Step 5: Self-reflection ───────────────────────────────────────────
-    def _reflect(self, answer: str, context: str) -> Dict:
-        """Check if answer is grounded in context."""
-        try:
-            prompt = REFLECTION_PROMPT.format(
-                answer=answer[:1500],
-                context=context[:2000]
+                         history: List[Dict]) -> str:
+        hist_str = ""
+        if history:
+            recent   = history[-4:]
+            hist_str = "\n\nRecent conversation:\n" + "\n".join(
+                f"{'User' if m['role']=='user' else 'Assistant'}: {m['content'][:250]}"
+                for m in recent
             )
-            return self._llm_json(prompt)
+        prompt = (
+            f"Answer using ONLY the context below.{hist_str}\n\n"
+            f"Context:\n{context}\n\n"
+            f"Question: {question}\n\n"
+            "Rules: cite [Book, p.X], use **bold** for key terms, be thorough but concise."
+        )
+        return self._llm(prompt, system=SYSTEM_PROMPT, max_tokens=1200, temperature=0.3)
+
+    def _reflect(self, answer: str, context: str) -> Dict:
+        try:
+            return self._llm_json(REFLECTION_PROMPT.format(
+                answer=answer[:1500], context=context[:2000]
+            ))
         except Exception as e:
             logger.warning("Reflection failed: %s", e)
             return {"grounded": True, "issues": ""}
 
-    # ── Step 6: Chart detection & generation ─────────────────────────────
-    def _should_generate_chart(self, question: str, context: str) -> Dict:
-        """Detect if chart would enhance the answer."""
-        chart_keywords = [
-            "compare", "comparison", "vs", "versus", "difference",
-            "percentage", "return", "growth", "increase", "decrease",
-            "timeline", "years", "phases", "stages", "quadrant",
-            "how much", "how many", "rate", "ratio", "performance"
-        ]
-        q_lower = question.lower()
-        needs_chart_hint = any(kw in q_lower for kw in chart_keywords)
-
-        if not needs_chart_hint:
+    def _chart_check(self, question: str, context: str) -> Dict:
+        kw = ["compare","vs","versus","difference","percent","return","growth",
+              "increase","decrease","timeline","years","phases","stages",
+              "quadrant","how much","how many","rate","ratio","performance","ranking"]
+        if not any(k in question.lower() for k in kw):
             return {"needs_chart": False}
-
         try:
-            prompt = CHART_DETECT_PROMPT.format(
-                question=question,
-                context_preview=context[:600]
-            )
-            return self._llm_json(prompt)
+            return self._llm_json(CHART_DETECT_PROMPT.format(
+                question=question, context_preview=context[:600]
+            ))
         except Exception:
             return {"needs_chart": False}
 
-    def _generate_chart_data(self, question: str, context: str,
-                              chart_type: str) -> Optional[Dict]:
-        """Generate chart data JSON from context."""
+    def _chart_data(self, question: str, context: str, ctype: str) -> Optional[Dict]:
         try:
-            prompt = CHART_DATA_PROMPT.format(
-                question=question,
-                context=context[:1500]
-            )
-            data = self._llm_json(prompt)
-            if (isinstance(data, dict)
-                    and "labels" in data
-                    and "values" in data
-                    and len(data["labels"]) >= 2):
+            data = self._llm_json(CHART_DATA_PROMPT.format(
+                question=question, context=context[:1500]
+            ))
+            if isinstance(data, dict) and len(data.get("labels", [])) >= 2:
                 return data
         except Exception as e:
-            logger.warning("Chart generation failed: %s", e)
+            logger.warning("Chart data generation failed: %s", e)
         return None
 
-    # ── Main query entry point ────────────────────────────────────────────
+    # ── Main entry point ──────────────────────────────────────────────────
     def query(self, question: str,
               chat_history: Optional[List[Dict]] = None) -> Dict[str, Any]:
-        """
-        Full agentic RAG pipeline.
-        Returns: {answer, sources, chart_data, steps}
-        """
         chat_history = chat_history or []
-        steps = []
+        logger.info("query() called: %r", question[:80])
 
-        # ── 1. Decompose ──────────────────────────────────────────────────
-        steps.append("🔍 Decomposing query into sub-questions…")
-        sub_queries = self._decompose_query(question)
+        # 1. Decompose
+        sub_queries = self._decompose(question)
         logger.info("Sub-queries: %s", sub_queries)
 
-        # ── 2. Multi-query retrieval ──────────────────────────────────────
-        steps.append(f"📚 Retrieving context for {len(sub_queries)} queries…")
+        # 2. Retrieve
         chunks = self._multi_retrieve(sub_queries)
-
         if not chunks:
+            logger.warning("No chunks retrieved for question: %r", question)
             return {
-                "answer": "⚠️ I couldn't find relevant information in the indexed documents. "
-                          "Please make sure you've uploaded and indexed your PDF files.",
+                "answer": (
+                    "I couldn't find relevant passages in your indexed documents.\n\n"
+                    "**Possible reasons:**\n"
+                    "- The PDF may not have been indexed yet — try clicking 'Index documents' again\n"
+                    "- The PDF might be image-based (scanned) with no extractable text\n"
+                    "- Try rephrasing your question with different keywords"
+                ),
                 "sources": [],
                 "chart_data": None,
-                "steps": steps
             }
 
-        # ── 3. Build context ──────────────────────────────────────────────
-        steps.append(f"⚡ Re-ranking {len(chunks)} retrieved chunks…")
+        # 3. Build context
         context, sources = self._build_context(chunks)
+        logger.info("Context built: %d chars, %d sources", len(context), len(sources))
 
-        # ── 4. Generate answer ────────────────────────────────────────────
-        steps.append("✍️ Generating grounded answer…")
+        # 4. Generate answer
         answer = self._generate_answer(question, context, chat_history)
 
-        # ── 5. Self-reflection ────────────────────────────────────────────
-        steps.append("🪞 Verifying answer is grounded…")
+        # 5. Self-reflect (one retry if hallucination detected)
         reflection = self._reflect(answer, context)
         if not reflection.get("grounded", True) and reflection.get("issues"):
-            # Retry with stricter prompt
-            steps.append("⚠️ Detected potential hallucination, regenerating…")
-            strict_system = SYSTEM_PROMPT + "\n\nCRITICAL: You MUST only state facts explicitly present in the context. If unsure, say 'The provided context does not clearly address this.'"
+            logger.info("Reflection flagged issues: %s — retrying", reflection["issues"])
             answer = self._generate_answer(question, context, chat_history)
 
-        # ── 6. Chart generation ───────────────────────────────────────────
+        # 6. Chart
         chart_data = None
-        chart_check = self._should_generate_chart(question, context)
-        if chart_check.get("needs_chart"):
-            steps.append("📊 Generating visualization…")
-            chart_data = self._generate_chart_data(
-                question, context,
-                chart_check.get("chart_type", "bar")
-            )
+        cc = self._chart_check(question, context)
+        if cc.get("needs_chart"):
+            chart_data = self._chart_data(question, context, cc.get("chart_type", "bar"))
 
-        return {
-            "answer": answer,
-            "sources": sources,
-            "chart_data": chart_data,
-            "steps": steps
-        }
+        return {"answer": answer, "sources": sources, "chart_data": chart_data}

@@ -47,7 +47,7 @@ html, body, [class*="css"] {
 /* ── ALL sidebar text dark ── */
 [data-testid="stSidebar"],
 [data-testid="stSidebar"] * {
-    color: #1a1a1a !important;
+    color: #ffffff !important;
 }
 
 /* ── File uploader: force white bg, dark text ── */

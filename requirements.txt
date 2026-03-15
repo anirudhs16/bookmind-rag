@@ -13,7 +13,7 @@ langchain-text-splitters>=0.2.0
 sentence-transformers>=3.0.0
 pymupdf>=1.24.0
 
-# Vector DB
+# Vector DB — pin to >= 1.9 so query_points() is guaranteed available
 qdrant-client>=1.9.0
 
 # Visualization
