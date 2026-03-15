@@ -16,115 +16,242 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
-html, body, [class*="css"] { font-family: 'Inter', -apple-system, sans-serif; font-size: 15px; }
-.stApp { background: #f9f8f6; }
-.main .block-container { padding: 0 0 100px 0; max-width: 100%; }
-
-/* Sidebar */
-[data-testid="stSidebar"] { background: #f4f3ef !important; border-right: 1px solid #e5e4e0 !important; }
-[data-testid="stSidebar"] > div { padding: 16px 12px !important; }
-
-/* Sidebar buttons */
-[data-testid="stSidebar"] .stButton button {
-    background: transparent; border: none; text-align: left;
-    color: #3d3d3d; font-size: 0.84rem; padding: 7px 10px;
-    border-radius: 8px; width: 100%; transition: background 0.15s;
+* { box-sizing: border-box; }
+html, body, [class*="css"] {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
 }
-[data-testid="stSidebar"] .stButton button:hover { background: #eae9e4; color: #1a1a1a; }
 
-/* New chat primary button */
-button[kind="primary"] {
-    background: #1a1a1a !important; color: #fff !important;
-    font-weight: 500 !important; border-radius: 8px !important;
-    font-size: 0.85rem !important; border: none !important;
+/* ── App background ── */
+.stApp, .main { background-color: #ffffff !important; }
+.main .block-container {
+    padding: 0 !important;
+    max-width: 100% !important;
 }
-button[kind="primary"]:hover { background: #333 !important; }
 
-/* Chat wrapper */
-.chat-wrapper { max-width: 760px; margin: 0 auto; padding: 28px 20px 110px; }
-
-/* Page header */
-.page-header {
-    display: flex; align-items: center; gap: 12px;
-    padding: 0 0 22px; border-bottom: 1px solid #e8e7e3; margin-bottom: 28px;
+/* ── Sidebar ── */
+section[data-testid="stSidebar"] {
+    background-color: #f7f7f5 !important;
+    border-right: 1px solid #e8e8e4 !important;
+    min-width: 260px !important;
+    max-width: 280px !important;
 }
-.page-header .logo {
-    width: 36px; height: 36px; background: #1a1a1a; border-radius: 9px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 17px; flex-shrink: 0;
+section[data-testid="stSidebar"] > div:first-child {
+    padding: 20px 14px !important;
 }
-.page-header h1 { font-size: 1.2rem; font-weight: 600; color: #1a1a1a; margin: 0; letter-spacing: -0.3px; }
-.page-header .subtitle { font-size: 0.76rem; color: #999; margin: 2px 0 0; }
 
-/* Welcome */
-.welcome-box { text-align: center; padding: 48px 24px 32px; }
-.welcome-box .icon { font-size: 2.5rem; margin-bottom: 12px; }
-.welcome-box h2 { font-size: 1.3rem; font-weight: 600; color: #1a1a1a; margin: 0 0 8px; }
-.welcome-box p { font-size: 0.86rem; color: #777; margin: 0 0 28px; line-height: 1.6; }
-
-.suggestion-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 500px; margin: 0 auto; }
-.suggestion-card {
-    background: #fff; border: 1px solid #e5e4e0; border-radius: 10px;
-    padding: 12px 14px; text-align: left;
+/* All text in sidebar */
+section[data-testid="stSidebar"] p,
+section[data-testid="stSidebar"] span,
+section[data-testid="stSidebar"] label,
+section[data-testid="stSidebar"] div {
+    color: #1a1a1a !important;
 }
-.suggestion-card .s-icon { font-size: 1rem; margin-bottom: 5px; }
-.suggestion-card .s-text { font-size: 0.79rem; color: #2d2d2d; line-height: 1.4; font-weight: 500; }
-.suggestion-card .s-sub { font-size: 0.7rem; color: #aaa; margin-top: 2px; }
 
-/* Messages */
-.msg-row { display: flex; gap: 10px; margin: 16px 0; align-items: flex-start; }
-.msg-row.user { flex-direction: row-reverse; }
-.avatar { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
-.avatar.bot { background: #1a1a1a; }
-.avatar.user-av { background: #e8e7e3; }
-.bubble { max-width: 80%; padding: 11px 15px; border-radius: 14px; font-size: 0.88rem; line-height: 1.65; }
-.bubble.bot { background: #fff; border: 1px solid #e8e7e3; color: #1a1a1a; border-radius: 4px 14px 14px 14px; }
-.bubble.user { background: #1a1a1a; color: #f0f0f0; border-radius: 14px 4px 14px 14px; }
+/* ── Sidebar buttons ── */
+section[data-testid="stSidebar"] .stButton > button {
+    background: transparent !important;
+    color: #1a1a1a !important;
+    border: 1px solid transparent !important;
+    border-radius: 7px !important;
+    font-size: 0.83rem !important;
+    padding: 6px 10px !important;
+    text-align: left !important;
+    width: 100% !important;
+    font-weight: 400 !important;
+    box-shadow: none !important;
+}
+section[data-testid="stSidebar"] .stButton > button:hover {
+    background: #ebebea !important;
+    border-color: transparent !important;
+}
 
-/* Sources */
-.sources-row { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #f0eeea; }
-.source-chip { display: inline-flex; align-items: center; gap: 4px; background: #f4f3ef; border: 1px solid #e5e4e0; border-radius: 20px; padding: 2px 9px; font-size: 0.71rem; color: #5a5a5a; font-weight: 500; }
+/* New chat button override */
+section[data-testid="stSidebar"] .stButton > button[kind="primary"],
+section[data-testid="stSidebar"] button[data-testid="stBaseButton-primary"] {
+    background: #1a1a1a !important;
+    color: #ffffff !important;
+    border-radius: 8px !important;
+    font-weight: 500 !important;
+    border: none !important;
+    padding: 9px 16px !important;
+    margin-bottom: 4px !important;
+}
+section[data-testid="stSidebar"] .stButton > button[kind="primary"]:hover,
+section[data-testid="stSidebar"] button[data-testid="stBaseButton-primary"]:hover {
+    background: #333333 !important;
+}
 
-/* Sidebar labels */
-.sidebar-label { font-size: 0.69rem; font-weight: 600; color: #aaa; text-transform: uppercase; letter-spacing: 0.6px; padding: 4px 2px; margin: 14px 0 6px; }
+/* ── File uploader — force light theme ── */
+section[data-testid="stSidebar"] [data-testid="stFileUploader"] {
+    background: #ffffff !important;
+    border: 1.5px dashed #cccccc !important;
+    border-radius: 10px !important;
+    padding: 8px !important;
+}
+section[data-testid="stSidebar"] [data-testid="stFileUploader"] * {
+    color: #1a1a1a !important;
+    background: transparent !important;
+}
+section[data-testid="stSidebar"] [data-testid="stFileUploader"] button {
+    background: #ffffff !important;
+    color: #1a1a1a !important;
+    border: 1px solid #cccccc !important;
+    border-radius: 6px !important;
+}
 
-/* Pills */
-.pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 20px; font-size: 0.71rem; font-weight: 500; }
-.pill-ok { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
-.pill-warn { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+/* ── Section labels ── */
+.section-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: #999999 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    margin: 16px 0 6px;
+    padding: 0 2px;
+}
+
+/* ── Status pills ── */
+.pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 10px; border-radius: 20px;
+    font-size: 0.71rem; font-weight: 500;
+}
+.pill-ok  { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+.pill-err { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
 .pill-book { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
 
-/* Input form */
-[data-testid="stForm"] {
-    background: #f9f8f6; border-top: 1px solid #e8e7e3;
-    position: fixed; bottom: 0; left: 0; right: 0;
-    padding: 12px 24px; z-index: 999;
+/* ── Main chat area ── */
+.chat-outer {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 32px 24px 120px;
+    background: #ffffff;
+    min-height: 100vh;
 }
-[data-testid="stForm"] .stTextInput input {
-    background: #fff !important; border: 1px solid #ddd !important;
-    border-radius: 10px !important; color: #1a1a1a !important;
+
+/* ── Page header ── */
+.page-header {
+    display: flex; align-items: center; gap: 12px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #efefed;
+    margin-bottom: 28px;
+}
+.ph-logo {
+    width: 36px; height: 36px; background: #1a1a1a; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px;
+}
+.ph-title { font-size: 1.15rem; font-weight: 600; color: #1a1a1a; margin: 0; }
+.ph-sub   { font-size: 0.73rem; color: #aaaaaa; margin: 2px 0 0; }
+
+/* ── Welcome ── */
+.welcome { text-align: center; padding: 52px 20px 32px; }
+.welcome .w-icon { font-size: 2.4rem; margin-bottom: 12px; }
+.welcome h2 { font-size: 1.25rem; font-weight: 600; color: #1a1a1a; margin: 0 0 8px; }
+.welcome p  { font-size: 0.84rem; color: #777; margin: 0 0 28px; line-height: 1.6; }
+
+.sug-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 480px; margin: 0 auto; }
+.sug-card {
+    background: #fafaf9; border: 1px solid #e8e8e4; border-radius: 10px;
+    padding: 12px 14px; text-align: left;
+}
+.sug-icon { font-size: 1rem; margin-bottom: 4px; }
+.sug-text { font-size: 0.78rem; color: #1a1a1a; font-weight: 500; line-height: 1.4; }
+.sug-sub  { font-size: 0.69rem; color: #aaaaaa; margin-top: 2px; }
+
+/* ── Chat messages ── */
+.msg-wrap { margin: 16px 0; }
+
+.msg-user {
+    display: flex; justify-content: flex-end; margin: 14px 0;
+}
+.msg-user .bubble-u {
+    background: #1a1a1a; color: #f5f5f5;
+    padding: 10px 15px; border-radius: 16px 4px 16px 16px;
+    font-size: 0.88rem; line-height: 1.6;
+    max-width: 75%;
+}
+
+.msg-bot { display: flex; gap: 10px; margin: 14px 0; align-items: flex-start; }
+.bot-av {
+    width: 28px; height: 28px; min-width: 28px; background: #1a1a1a;
+    border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; font-size: 13px; margin-top: 2px;
+}
+.bubble-b {
+    background: #fafaf9; border: 1px solid #e8e8e4;
+    color: #1a1a1a; padding: 12px 16px;
+    border-radius: 4px 16px 16px 16px;
+    font-size: 0.88rem; line-height: 1.68;
+    max-width: 85%;
+}
+
+/* ── Sources row ── */
+.src-row {
+    display: flex; flex-wrap: wrap; gap: 5px;
+    margin-top: 10px; padding-top: 10px;
+    border-top: 1px solid #efefed;
+}
+.src-chip {
+    display: inline-flex; align-items: center; gap: 3px;
+    background: #f4f4f2; border: 1px solid #e8e8e4;
+    border-radius: 20px; padding: 2px 9px;
+    font-size: 0.69rem; color: #555555; font-weight: 500;
+}
+
+/* ── Input bar ── */
+.stForm {
+    position: fixed !important; bottom: 0 !important;
+    left: 0 !important; right: 0 !important;
+    background: #ffffff !important;
+    border-top: 1px solid #efefed !important;
+    padding: 12px 24px !important;
+    z-index: 9999 !important;
+}
+.stForm .stTextInput input {
+    background: #fafaf9 !important;
+    border: 1px solid #e0e0dc !important;
+    border-radius: 10px !important;
+    color: #1a1a1a !important;
     font-size: 0.9rem !important;
+    padding: 10px 16px !important;
+    font-family: 'Inter', sans-serif !important;
 }
-[data-testid="stForm"] .stTextInput input:focus {
-    border-color: #999 !important; box-shadow: 0 0 0 3px rgba(0,0,0,0.05) !important;
+.stForm .stTextInput input:focus {
+    border-color: #aaaaaa !important;
+    box-shadow: 0 0 0 3px rgba(0,0,0,0.05) !important;
+    outline: none !important;
 }
-[data-testid="stForm"] .stButton button {
-    background: #1a1a1a !important; color: #fff !important;
-    border-radius: 10px !important; border: none !important;
-    font-weight: 500 !important; font-size: 0.88rem !important;
-}
+.stForm .stTextInput input::placeholder { color: #aaaaaa !important; }
 
-/* Scrollbar */
+.stForm .stButton > button {
+    background: #1a1a1a !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: 10px !important;
+    font-weight: 500 !important;
+    font-size: 0.88rem !important;
+    padding: 10px 20px !important;
+}
+.stForm .stButton > button:hover { background: #333333 !important; }
+
+/* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 5px; }
-::-webkit-scrollbar-thumb { background: #ddd; border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: #dddddd; border-radius: 3px; }
 
-/* Progress */
+/* ── Progress bar ── */
 [data-testid="stProgressBar"] > div > div { background: #1a1a1a !important; }
 
-/* Upload */
-[data-testid="stFileUploader"] { border: 1.5px dashed #d5d4cf !important; border-radius: 10px !important; }
+/* ── Warnings ── */
+.stAlert { border-radius: 8px !important; font-size: 0.83rem !important; }
+
+/* ── Spinner ── */
+.stSpinner > div { border-top-color: #1a1a1a !important; }
+
+/* ── Hide streamlit default elements ── */
+#MainMenu, footer, header { visibility: hidden; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -155,40 +282,46 @@ def init_pipeline():
         st.session_state.rag_pipeline = AgenticRAGPipeline()
     return st.session_state.rag_pipeline
 
-def fmt(text):
-    """Minimal safe HTML formatting for bot messages."""
-    text = (text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
+def safe_fmt(text):
+    """Safely convert markdown-like text to simple HTML."""
+    text = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
     text = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', text)
     text = re.sub(r'\*(.+?)\*', r'<em>\1</em>', text)
     text = text.replace("\n\n", "<br><br>").replace("\n", "<br>")
     return text
 
-# ── Sidebar ───────────────────────────────────────────────────────────────────
+# ── SIDEBAR ──────────────────────────────────────────────────────────────────
 with st.sidebar:
+    # Logo row
     st.markdown("""
-    <div style="display:flex;align-items:center;gap:10px;padding:0 0 16px;">
+    <div style="display:flex;align-items:center;gap:10px;padding:0 0 16px 2px;">
         <div style="background:#1a1a1a;width:30px;height:30px;border-radius:7px;
-                    display:flex;align-items:center;justify-content:center;font-size:15px;">📚</div>
+             display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">📚</div>
         <div>
-            <div style="font-weight:600;font-size:0.93rem;color:#1a1a1a">BookMind</div>
-            <div style="font-size:0.69rem;color:#aaa">Agentic RAG</div>
+            <div style="font-size:0.92rem;font-weight:600;color:#1a1a1a;line-height:1.2;">BookMind</div>
+            <div style="font-size:0.68rem;color:#aaaaaa;line-height:1.2;">Agentic RAG</div>
         </div>
-    </div>""", unsafe_allow_html=True)
+    </div>
+    """, unsafe_allow_html=True)
 
     if st.button("＋  New chat", use_container_width=True, type="primary"):
-        new_session(); st.rerun()
+        new_session()
+        st.rerun()
 
-    st.markdown('<div class="sidebar-label">Conversations</div>', unsafe_allow_html=True)
+    # ── Conversations ──
+    st.markdown('<div class="section-label">Conversations</div>', unsafe_allow_html=True)
     sessions_sorted = sorted(st.session_state.sessions.values(),
                              key=lambda x: x["created"], reverse=True)
     if not sessions_sorted:
-        st.caption("No conversations yet")
+        st.markdown('<p style="font-size:0.78rem;color:#aaaaaa;margin:0;padding:2px 2px;">No conversations yet</p>',
+                    unsafe_allow_html=True)
     for s in sessions_sorted:
         c1, c2 = st.columns([5, 1])
         with c1:
-            if st.button(s["title"][:32] + ("…" if len(s["title"]) > 32 else ""),
-                         key=f"s_{s['id']}", use_container_width=True):
-                st.session_state.current_session = s["id"]; st.rerun()
+            label = s["title"][:30] + ("…" if len(s["title"]) > 30 else "")
+            if st.button(label, key=f"s_{s['id']}", use_container_width=True):
+                st.session_state.current_session = s["id"]
+                st.rerun()
         with c2:
             if st.button("✕", key=f"d_{s['id']}"):
                 del st.session_state.sessions[s["id"]]
@@ -196,9 +329,13 @@ with st.sidebar:
                     st.session_state.current_session = None
                 st.rerun()
 
-    st.markdown('<div class="sidebar-label">Books</div>', unsafe_allow_html=True)
-    uploaded = st.file_uploader("Upload PDFs", type=["pdf"],
-                                accept_multiple_files=True, label_visibility="collapsed")
+    # ── Books / Upload ──
+    st.markdown('<div class="section-label">Books</div>', unsafe_allow_html=True)
+    uploaded = st.file_uploader(
+        "Upload PDFs", type=["pdf"],
+        accept_multiple_files=True,
+        label_visibility="collapsed"
+    )
     new_files = [f for f in (uploaded or []) if f.name not in st.session_state.indexed_files]
 
     if new_files:
@@ -209,7 +346,8 @@ with st.sidebar:
                 prog.progress((i + 0.2) / len(new_files), text=f"Processing {f.name[:26]}…")
                 import tempfile, os as _os
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-                    tmp.write(f.read()); tmp_path = tmp.name
+                    tmp.write(f.read())
+                    tmp_path = tmp.name
                 pipeline.index_document(tmp_path, f.name)
                 _os.unlink(tmp_path)
                 st.session_state.indexed_files.append(f.name)
@@ -220,135 +358,198 @@ with st.sidebar:
 
     if st.session_state.indexed_files:
         for fname in st.session_state.indexed_files:
-            st.markdown(f'<div style="margin-bottom:4px"><span class="pill pill-book">📗 {fname[:26]}</span></div>',
-                        unsafe_allow_html=True)
+            st.markdown(
+                f'<div style="margin:3px 0"><span class="pill pill-book">📗 {fname[:26]}</span></div>',
+                unsafe_allow_html=True)
     else:
-        st.caption("No books indexed yet")
+        st.markdown('<p style="font-size:0.78rem;color:#aaaaaa;margin:4px 2px;">No books indexed yet</p>',
+                    unsafe_allow_html=True)
 
-    st.markdown('<div class="sidebar-label">Status</div>', unsafe_allow_html=True)
-    gok = bool(os.getenv("GROQ_API_KEY")); qok = bool(os.getenv("QDRANT_URL"))
+    # ── Status ──
+    st.markdown('<div class="section-label">Status</div>', unsafe_allow_html=True)
+    gok = bool(os.getenv("GROQ_API_KEY"))
+    qok = bool(os.getenv("QDRANT_URL"))
     st.markdown(
-        f'<div style="margin-bottom:5px"><span class="pill {"pill-ok" if gok else "pill-warn"}">{"✓" if gok else "✗"} Groq</span></div>'
-        f'<div><span class="pill {"pill-ok" if qok else "pill-warn"}">{"✓" if qok else "✗"} Qdrant</span></div>',
+        f'<div style="margin-bottom:5px">'
+        f'<span class="pill {"pill-ok" if gok else "pill-err"}">{"✓" if gok else "✗"} Groq</span></div>'
+        f'<div><span class="pill {"pill-ok" if qok else "pill-err"}">{"✓" if qok else "✗"} Qdrant</span></div>',
         unsafe_allow_html=True)
 
-# ── Main ──────────────────────────────────────────────────────────────────────
+# ── MAIN ──────────────────────────────────────────────────────────────────────
 session = get_current()
 
-st.markdown('<div class="chat-wrapper">', unsafe_allow_html=True)
+# Wrap everything in a centered div
+st.markdown('<div class="chat-outer">', unsafe_allow_html=True)
 
+# Header
 st.markdown("""
 <div class="page-header">
-    <div class="logo">📚</div>
+    <div class="ph-logo">📚</div>
     <div>
-        <h1>BookMind</h1>
-        <div class="subtitle">Rich Dad Poor Dad · The Intelligent Investor · Agentic RAG</div>
+        <div class="ph-title">BookMind</div>
+        <div class="ph-sub">Rich Dad Poor Dad · The Intelligent Investor · Agentic RAG</div>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
+# ── Not indexed warning ──
+if not st.session_state.rag_ready:
+    st.info("👈  Upload and index a PDF from the sidebar to start chatting.")
+
+# ── Welcome or messages ──
 if not session["messages"]:
     st.markdown("""
-    <div class="welcome-box">
-        <div class="icon">📖</div>
+    <div class="welcome">
+        <div class="w-icon">📖</div>
         <h2>What would you like to learn?</h2>
-        <p>Ask questions about your uploaded books. I'll find the most relevant<br>
-        passages using hybrid search and cite my sources.</p>
+        <p>Ask questions about your books. I'll retrieve the most relevant passages<br>
+        using hybrid search and cite every source.</p>
     </div>
-    <div class="suggestion-grid">
-        <div class="suggestion-card"><div class="s-icon">💰</div>
-          <div class="s-text">Difference between assets and liabilities?</div>
-          <div class="s-sub">Rich Dad Poor Dad</div></div>
-        <div class="suggestion-card"><div class="s-icon">🛡️</div>
-          <div class="s-text">Explain the margin of safety concept</div>
-          <div class="s-sub">The Intelligent Investor</div></div>
-        <div class="suggestion-card"><div class="s-icon">⚖️</div>
-          <div class="s-text">Compare both authors' views on stocks</div>
-          <div class="s-sub">Both books</div></div>
-        <div class="suggestion-card"><div class="s-icon">🧠</div>
-          <div class="s-text">What is the cash flow quadrant?</div>
-          <div class="s-sub">Rich Dad Poor Dad</div></div>
-    </div>""", unsafe_allow_html=True)
+    <div class="sug-grid">
+        <div class="sug-card">
+            <div class="sug-icon">💰</div>
+            <div class="sug-text">What's the difference between assets and liabilities?</div>
+            <div class="sug-sub">Rich Dad Poor Dad</div>
+        </div>
+        <div class="sug-card">
+            <div class="sug-icon">🛡️</div>
+            <div class="sug-text">Explain the margin of safety concept</div>
+            <div class="sug-sub">The Intelligent Investor</div>
+        </div>
+        <div class="sug-card">
+            <div class="sug-icon">⚖️</div>
+            <div class="sug-text">Compare both authors' views on stocks</div>
+            <div class="sug-sub">Both books</div>
+        </div>
+        <div class="sug-card">
+            <div class="sug-icon">🧠</div>
+            <div class="sug-text">What is the cash flow quadrant?</div>
+            <div class="sug-sub">Rich Dad Poor Dad</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 else:
     for msg in session["messages"]:
         if msg["role"] == "user":
             st.markdown(f"""
-            <div class="msg-row user">
-                <div class="avatar user-av">👤</div>
-                <div class="bubble user">{msg["content"]}</div>
+            <div class="msg-user">
+                <div class="bubble-u">{msg["content"]}</div>
             </div>""", unsafe_allow_html=True)
         else:
             sources_html = ""
             if msg.get("sources"):
-                chips = "".join(f'<span class="source-chip">📄 {s}</span>' for s in msg["sources"])
-                sources_html = f'<div class="sources-row">{chips}</div>'
+                chips = "".join(
+                    f'<span class="src-chip">📄 {s}</span>'
+                    for s in msg["sources"]
+                )
+                sources_html = f'<div class="src-row">{chips}</div>'
 
             st.markdown(f"""
-            <div class="msg-row">
-                <div class="avatar bot">🤖</div>
-                <div style="max-width:80%">
-                    <div class="bubble bot">{fmt(msg["content"])}{sources_html}</div>
-                </div>
+            <div class="msg-bot">
+                <div class="bot-av">🤖</div>
+                <div class="bubble-b">{safe_fmt(msg["content"])}{sources_html}</div>
             </div>""", unsafe_allow_html=True)
 
+            # Render chart if present
             if msg.get("chart_data"):
-                import matplotlib; matplotlib.use("Agg")
-                import matplotlib.pyplot as plt, io
-                cd = msg["chart_data"]
-                fig, ax = plt.subplots(figsize=(6.2, 3), facecolor="#ffffff")
-                ax.set_facecolor("#fafaf8")
-                COLORS = ["#1a1a1a", "#555", "#888", "#aaa", "#ccc"]
-                ctype = cd.get("type", "bar")
-                if ctype == "bar":
-                    bars = ax.bar(cd["labels"], cd["values"], color=COLORS[:len(cd["values"])], edgecolor="none", width=0.5)
-                    for bar, val in zip(bars, cd["values"]):
-                        ax.text(bar.get_x()+bar.get_width()/2, bar.get_height()+max(cd["values"])*0.015,
-                                str(val), ha="center", va="bottom", color="#555", fontsize=8.5, fontweight="500")
-                elif ctype == "line":
-                    ax.plot(cd["labels"], cd["values"], color="#1a1a1a", linewidth=2,
-                            marker="o", markersize=4.5, markerfacecolor="#fff",
-                            markeredgecolor="#1a1a1a", markeredgewidth=1.5)
-                    ax.fill_between(range(len(cd["labels"])), cd["values"], alpha=0.06, color="#1a1a1a")
-                elif ctype == "horizontal_bar":
-                    ax.barh(cd["labels"], cd["values"], color=COLORS[:len(cd["values"])], edgecolor="none", height=0.5)
-                ax.set_title(cd.get("title",""), color="#1a1a1a", fontsize=10.5, pad=8, fontweight="600", loc="left")
-                ax.tick_params(colors="#888", labelsize=8)
-                for sp in ax.spines.values(): sp.set_edgecolor("#e8e7e3")
-                ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
-                ax.yaxis.grid(True, color="#f0eeea", linewidth=0.8); ax.set_axisbelow(True)
-                plt.tight_layout(pad=1.2)
-                buf = io.BytesIO()
-                plt.savefig(buf, format="png", dpi=150, bbox_inches="tight", facecolor="#fff")
-                buf.seek(0); st.image(buf, use_container_width=True); plt.close(fig)
+                try:
+                    import matplotlib
+                    matplotlib.use("Agg")
+                    import matplotlib.pyplot as plt
+                    import io
+
+                    cd = msg["chart_data"]
+                    fig, ax = plt.subplots(figsize=(6, 3), facecolor="#ffffff")
+                    ax.set_facecolor("#fafaf9")
+                    COLORS = ["#1a1a1a", "#555555", "#888888", "#aaaaaa", "#cccccc"]
+                    ctype = cd.get("type", "bar")
+                    vals = cd.get("values", [])
+                    labs = cd.get("labels", [])
+
+                    if ctype == "bar":
+                        bars = ax.bar(labs, vals,
+                                      color=COLORS[:len(vals)],
+                                      edgecolor="none", width=0.5)
+                        for bar, val in zip(bars, vals):
+                            ax.text(bar.get_x() + bar.get_width()/2,
+                                    bar.get_height() + max(vals) * 0.015,
+                                    str(val), ha="center", va="bottom",
+                                    color="#555", fontsize=8.5, fontweight="500")
+                    elif ctype == "line":
+                        ax.plot(labs, vals, color="#1a1a1a", linewidth=2,
+                                marker="o", markersize=4.5,
+                                markerfacecolor="#fff", markeredgecolor="#1a1a1a",
+                                markeredgewidth=1.5)
+                        ax.fill_between(range(len(labs)), vals,
+                                        alpha=0.06, color="#1a1a1a")
+                    elif ctype == "horizontal_bar":
+                        ax.barh(labs, vals, color=COLORS[:len(vals)],
+                                edgecolor="none", height=0.5)
+
+                    ax.set_title(cd.get("title", ""), color="#1a1a1a",
+                                 fontsize=10, pad=8, fontweight="600", loc="left")
+                    ax.tick_params(colors="#888888", labelsize=8)
+                    for sp in ax.spines.values():
+                        sp.set_edgecolor("#e8e8e4")
+                    ax.spines["top"].set_visible(False)
+                    ax.spines["right"].set_visible(False)
+                    ax.yaxis.grid(True, color="#f0f0ee", linewidth=0.8)
+                    ax.set_axisbelow(True)
+                    plt.tight_layout(pad=1.2)
+
+                    buf = io.BytesIO()
+                    plt.savefig(buf, format="png", dpi=150,
+                                bbox_inches="tight", facecolor="#ffffff")
+                    buf.seek(0)
+                    st.image(buf, use_container_width=True)
+                    plt.close(fig)
+                except Exception:
+                    pass
 
 st.markdown("</div>", unsafe_allow_html=True)
 
-# ── Input ─────────────────────────────────────────────────────────────────────
-if not st.session_state.rag_ready:
-    st.warning("⚠️ Upload and index at least one PDF using the sidebar to start chatting.")
-
+# ── Fixed input form at bottom ────────────────────────────────────────────────
 with st.form("chat_form", clear_on_submit=True):
     c1, c2 = st.columns([9, 1])
     with c1:
         user_input = st.text_input(
-            "Message", label_visibility="collapsed",
-            placeholder="Ask about your books…" if st.session_state.rag_ready else "Index a PDF first…",
-            disabled=not st.session_state.rag_ready)
+            "Message",
+            label_visibility="collapsed",
+            placeholder="Ask about your books…" if st.session_state.rag_ready else "Index a PDF first to enable chat…",
+            disabled=not st.session_state.rag_ready
+        )
     with c2:
-        submitted = st.form_submit_button("Send", use_container_width=True,
-                                          type="primary", disabled=not st.session_state.rag_ready)
+        submitted = st.form_submit_button(
+            "Send",
+            use_container_width=True,
+            type="primary",
+            disabled=not st.session_state.rag_ready
+        )
 
 if submitted and user_input.strip():
     session["messages"].append({"role": "user", "content": user_input})
     if len(session["messages"]) == 1:
         session["title"] = user_input[:40]
+
     with st.spinner("Thinking…"):
         try:
-            result = init_pipeline().query(question=user_input,
-                                           chat_history=session["messages"][:-1])
-            bot_msg = {"role": "assistant", "content": result["answer"],
-                       "sources": result.get("sources", []), "chart_data": result.get("chart_data")}
+            result = init_pipeline().query(
+                question=user_input,
+                chat_history=session["messages"][:-1]
+            )
+            bot_msg = {
+                "role": "assistant",
+                "content": result["answer"],
+                "sources": result.get("sources", []),
+                "chart_data": result.get("chart_data"),
+            }
         except Exception as e:
-            bot_msg = {"role": "assistant", "content": f"Error: {e}", "sources": [], "chart_data": None}
+            bot_msg = {
+                "role": "assistant",
+                "content": f"Something went wrong: {str(e)}",
+                "sources": [],
+                "chart_data": None,
+            }
+
     session["messages"].append(bot_msg)
     st.rerun()

@@ -1,10 +1,9 @@
-# .streamlit/config.toml
 [theme]
-base = "dark"
-backgroundColor = "#0f0f13"
-secondaryBackgroundColor = "#16161d"
-textColor = "#e0e0f0"
-primaryColor = "#7c3aed"
+base = "light"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f7f7f5"
+textColor = "#1a1a1a"
+primaryColor = "#1a1a1a"
 
 [server]
 maxUploadSize = 200
